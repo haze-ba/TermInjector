@@ -64,6 +64,19 @@ xcodebuild test -scheme TermInjector -destination 'platform=macOS'
 6. `Shift+Enter` で改行
 7. `Escape` でオーバーレイを閉じる
 
+### キーボードショートカット
+
+オーバーレイ内では標準的な編集ショートカットが利用できます。
+
+| ショートカット | 動作 |
+|-------------|------|
+| `Cmd+X` | カット |
+| `Cmd+C` | コピー |
+| `Cmd+V` | ペースト |
+| `Cmd+A` | すべてを選択 |
+| `Cmd+Z` | 取り消す |
+| `Cmd+Shift+Z` | やり直す |
+
 ### 注意事項
 
 - Terminal.app の「安全なキーボード入力」(Secure Keyboard Entry) が有効だとキー送信が効かない場合があります。Terminal.appのメニューからOFFにしてください。

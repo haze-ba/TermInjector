@@ -4,9 +4,11 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   AppDelegate                    │
-│  - NSApp.setActivationPolicy(.accessory)         │
-│  - StatusBarController / HotKeyManager 初期化     │
+│              main.swift → AppDelegate              │
+│  - main.swift: NSApplication.shared + delegate設定 │
+│  - NSApp.setActivationPolicy(.accessory)           │
+│  - setupMainMenu(): 標準編集メニュー構築             │
+│  - StatusBarController / HotKeyManager 初期化       │
 │  - 起動時: アクセシビリティ権限チェック、画像クリーンアップ │
 └────────┬──────────────────────┬──────────────────┘
          │                      │

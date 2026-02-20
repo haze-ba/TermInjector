@@ -20,12 +20,11 @@ final class StatusBarController {
             if let image = NSImage(named: "MenuBarIcon") {
                 image.isTemplate = true
                 button.image = image
+            } else if let image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: Constants.appName) {
+                image.isTemplate = true
+                button.image = image
             } else {
-                // フォールバック: SF Symbolsを使用
-                if let image = NSImage(systemSymbolName: "text.cursor", accessibilityDescription: Constants.appName) {
-                    image.isTemplate = true
-                    button.image = image
-                }
+                button.title = "TI"
             }
             button.toolTip = Constants.appName
         }

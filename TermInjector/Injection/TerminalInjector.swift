@@ -61,8 +61,9 @@ final class TerminalInjector {
         // 4. クリップボード退避
         let snapshot = clipboardManager.save()
 
-        // 5. テキストをクリップボードに設定
-        guard clipboardManager.setText(text) else {
+        // 5. テキストをクリップボードに設定（末尾改行を除去）
+        let trimmedText = text.replacingOccurrences(of: "\\n+$", with: "", options: .regularExpression)
+        guard clipboardManager.setText(trimmedText) else {
             clipboardManager.restore(snapshot, force: true)
             return .injectionFailed("クリップボードへのテキスト設定に失敗しました")
         }

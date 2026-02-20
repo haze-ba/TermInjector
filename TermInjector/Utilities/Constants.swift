@@ -8,8 +8,8 @@ enum Constants {
     enum Defaults {
         static let overlayWidth: CGFloat = 480
         static let overlayHeight: CGFloat = 200
-        static let injectionPasteDelay: UInt64 = 50_000_000   // 50ms
-        static let injectionEnterDelay: UInt64 = 100_000_000  // 100ms
-        static let injectionRestoreDelay: UInt64 = 200_000_000 // 200ms
+        static let injectionPasteDelay: UInt64 = 100_000_000   // 100ms
+        static let injectionEnterDelay: UInt64 = 300_000_000  // 300ms
+        static let injectionRestoreDelay: UInt64 = 300_000_000 // 300ms
     }
 }
