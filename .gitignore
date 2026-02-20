@@ -29,6 +29,8 @@ Package.resolved
 
 # TermInjector
 .terminjector/
+.serena/
+*.profraw
 
 # Project-local (not for distribution)
 CLAUDE.md
