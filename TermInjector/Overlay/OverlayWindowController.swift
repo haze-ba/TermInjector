@@ -66,11 +66,17 @@ final class OverlayWindowController: NSWindowController {
 
         // 非表示→表示の遷移時のみ、直前のフォアグラウンドアプリを記憶
         if !panel.isVisible {
-            previousFrontmostApp = NSWorkspace.shared.frontmostApplication
+            let frontmost = NSWorkspace.shared.frontmostApplication
+            // hide()直後のレース条件で自分自身が返る場合は記録を更新しない
+            if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
+                previousFrontmostApp = frontmost
+            }
         }
 
-        panel.makeKeyAndOrderFront(nil)
+        // .accessoryアプリでもアクティブ状態に関係なくキーウィンドウ化するためorderFrontRegardlessを使用
+        panel.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
+        panel.makeKey()
         overlayViewController.focusInput()
     }
 
@@ -82,8 +88,9 @@ final class OverlayWindowController: NSWindowController {
     /// previousFrontmostApp は更新しない（元のターミナルに送信するため）
     private func refocus() {
         guard let panel = window, panel.isVisible else { return }
-        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
+        panel.makeKey()
         overlayViewController.focusInput()
     }
 
