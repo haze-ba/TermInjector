@@ -72,6 +72,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         editMenu.addItem(NSMenuItem(title: "カット", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
         editMenu.addItem(NSMenuItem(title: "コピー", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
         editMenu.addItem(NSMenuItem(title: "ペースト", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+
+        let pasteAsPlainTextItem = NSMenuItem(title: "プレーンテキストとしてペースト", action: #selector(NSTextView.pasteAsPlainText(_:)), keyEquivalent: "v")
+        pasteAsPlainTextItem.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(pasteAsPlainTextItem)
+
         editMenu.addItem(NSMenuItem(title: "すべてを選択", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)

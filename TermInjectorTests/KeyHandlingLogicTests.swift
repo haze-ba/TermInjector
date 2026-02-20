@@ -143,4 +143,41 @@ final class KeyHandlingLogicTests: XCTestCase {
         let event = KeyEvent(keyCode: KeyHandlingLogic.tabKeyCode, modifiers: [], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .passToSuper)
     }
+
+    // MARK: - 上下矢印（履歴ナビゲーション）
+
+    func testUpArrow_TextEmpty_ReturnsHistoryUp() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.upArrowKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: true), .historyUp)
+    }
+
+    func testUpArrow_TextNotEmpty_NotNavigating_PassesToSuper() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.upArrowKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: false, isHistoryNavigating: false), .passToSuper)
+    }
+
+    func testUpArrow_AlreadyNavigating_ReturnsHistoryUp() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.upArrowKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: false, isHistoryNavigating: true), .historyUp)
+    }
+
+    func testDownArrow_Navigating_ReturnsHistoryDown() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.downArrowKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: false, isHistoryNavigating: true), .historyDown)
+    }
+
+    func testDownArrow_NotNavigating_PassesToSuper() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.downArrowKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: false, isHistoryNavigating: false), .passToSuper)
+    }
+
+    func testUpArrow_DuringIME_PassesToSuper() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.upArrowKeyCode, modifiers: [], hasMarkedText: true)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: true), .passToSuper)
+    }
+
+    func testUpArrow_WithModifiers_PassesToSuper() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.upArrowKeyCode, modifiers: [.command], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs, isTextEmpty: true), .passToSuper)
+    }
 }

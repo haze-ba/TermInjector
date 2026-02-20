@@ -12,6 +12,10 @@ enum KeyAction: Equatable {
     case passToIME
     /// デフォルトのNSTextView処理に委譲する
     case passToSuper
+    /// 履歴を古い方向へナビゲートする
+    case historyUp
+    /// 履歴を新しい方向へナビゲートする
+    case historyDown
 }
 
 /// キー入力に対するアクション判定の純粋関数群
@@ -47,15 +51,39 @@ enum KeyHandlingLogic {
     static let returnKeyCode: UInt16 = 76  // テンキーのEnter
     static let escapeKeyCode: UInt16 = 53
     static let tabKeyCode: UInt16 = 48
+    static let upArrowKeyCode: UInt16 = 126
+    static let downArrowKeyCode: UInt16 = 125
 
     /// キーイベントと設定から適切なアクションを判定する
-    static func determineAction(event: KeyEvent, preferences: Preferences) -> KeyAction {
+    /// - Parameters:
+    ///   - event: キーイベント
+    ///   - preferences: 設定
+    ///   - isTextEmpty: テキストビューが空かどうか（履歴ナビゲーション用）
+    ///   - isHistoryNavigating: 既に履歴ナビゲーション中かどうか
+    static func determineAction(
+        event: KeyEvent,
+        preferences: Preferences,
+        isTextEmpty: Bool = false,
+        isHistoryNavigating: Bool = false
+    ) -> KeyAction {
         let keyCode = event.keyCode
         let modifiers = event.modifiers
 
         // Escape → 常にクローズ
         if keyCode == escapeKeyCode {
             return .close
+        }
+
+        // 上下矢印キー → テキストが空または履歴ナビゲーション中なら履歴操作
+        if keyCode == upArrowKeyCode && modifiers.isEmpty && !event.hasMarkedText {
+            if isTextEmpty || isHistoryNavigating {
+                return .historyUp
+            }
+        }
+        if keyCode == downArrowKeyCode && modifiers.isEmpty && !event.hasMarkedText {
+            if isHistoryNavigating {
+                return .historyDown
+            }
         }
 
         // Enter/Returnキー以外はスーパーに委譲

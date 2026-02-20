@@ -27,6 +27,8 @@ final class PreferencesStoreTests: XCTestCase {
         XCTAssertFalse(store.sendOnCmdEnter)
         XCTAssertTrue(store.safetyCheck)
         XCTAssertTrue(store.closeAfterSend)
+        XCTAssertTrue(store.simulateEnterAfterPaste)
+        XCTAssertFalse(store.retainTextAfterSend)
     }
 
     // MARK: - 送信キー読み書き
@@ -62,6 +64,55 @@ final class PreferencesStoreTests: XCTestCase {
     func testReadWrite_closeAfterSend() {
         store.closeAfterSend = false
         XCTAssertFalse(store.closeAfterSend)
+    }
+
+    func testReadWrite_simulateEnterAfterPaste() {
+        XCTAssertTrue(store.simulateEnterAfterPaste)
+        store.simulateEnterAfterPaste = false
+        XCTAssertFalse(store.simulateEnterAfterPaste)
+        store.simulateEnterAfterPaste = true
+        XCTAssertTrue(store.simulateEnterAfterPaste)
+    }
+
+    func testReadWrite_retainTextAfterSend() {
+        XCTAssertFalse(store.retainTextAfterSend)
+        store.retainTextAfterSend = true
+        XCTAssertTrue(store.retainTextAfterSend)
+        store.retainTextAfterSend = false
+        XCTAssertFalse(store.retainTextAfterSend)
+    }
+
+    // MARK: - 注入タイミング設定
+
+    func testDefaultTimingValues() {
+        XCTAssertEqual(store.injectionPasteDelayMs, 100)
+        XCTAssertEqual(store.injectionEnterDelayMs, 300)
+        XCTAssertEqual(store.injectionRestoreDelayMs, 300)
+    }
+
+    func testReadWrite_injectionPasteDelayMs() {
+        store.injectionPasteDelayMs = 200
+        XCTAssertEqual(store.injectionPasteDelayMs, 200)
+    }
+
+    func testReadWrite_injectionEnterDelayMs() {
+        store.injectionEnterDelayMs = 500
+        XCTAssertEqual(store.injectionEnterDelayMs, 500)
+    }
+
+    func testReadWrite_injectionRestoreDelayMs() {
+        store.injectionRestoreDelayMs = 150
+        XCTAssertEqual(store.injectionRestoreDelayMs, 150)
+    }
+
+    func testResetTimingDefaults() {
+        store.injectionPasteDelayMs = 500
+        store.injectionEnterDelayMs = 800
+        store.injectionRestoreDelayMs = 50
+        store.resetTimingDefaults()
+        XCTAssertEqual(store.injectionPasteDelayMs, 100)
+        XCTAssertEqual(store.injectionEnterDelayMs, 300)
+        XCTAssertEqual(store.injectionRestoreDelayMs, 300)
     }
 
     // MARK: - 送信キーの独立性

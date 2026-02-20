@@ -13,6 +13,9 @@ final class InputTextView: NSTextView {
     /// 現在の設定（PreferencesStoreから同期）
     var keyPreferences = KeyHandlingLogic.Preferences()
 
+    /// 送信履歴（外部から注入）
+    var sendHistory: SendHistory?
+
     /// 画像添付のパスマップ（Phase 6で使用）
     var imagePathMap: [NSTextAttachment: String] = [:]
 
@@ -84,7 +87,12 @@ final class InputTextView: NSTextView {
             hasMarkedText: hasMarkedText()
         )
 
-        let action = KeyHandlingLogic.determineAction(event: keyEvent, preferences: keyPreferences)
+        let action = KeyHandlingLogic.determineAction(
+            event: keyEvent,
+            preferences: keyPreferences,
+            isTextEmpty: currentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            isHistoryNavigating: sendHistory?.isNavigating ?? false
+        )
 
         switch action {
         case .send:
@@ -99,6 +107,20 @@ final class InputTextView: NSTextView {
 
         case .passToIME:
             super.keyDown(with: event)
+
+        case .historyUp:
+            if let text = sendHistory?.navigateUp(current: currentText) {
+                string = text
+            } else {
+                super.keyDown(with: event)
+            }
+
+        case .historyDown:
+            if let text = sendHistory?.navigateDown() {
+                string = text
+            } else {
+                super.keyDown(with: event)
+            }
 
         case .passToSuper:
             super.keyDown(with: event)

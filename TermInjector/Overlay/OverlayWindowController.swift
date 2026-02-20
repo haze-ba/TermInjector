@@ -5,6 +5,7 @@ final class OverlayWindowController: NSWindowController {
     private let overlayViewController = OverlayViewController()
     private let terminalInjector = TerminalInjector()
     private let preferencesStore = PreferencesStore()
+    private let sendHistory = SendHistory()
 
     /// オーバーレイ表示直前のフォアグラウンドアプリ
     private(set) var previousFrontmostApp: NSRunningApplication?
@@ -41,6 +42,7 @@ final class OverlayWindowController: NSWindowController {
         self.init(window: panel)
 
         panel.contentViewController = overlayViewController
+        overlayViewController.setSendHistory(sendHistory)
 
         overlayViewController.onSend = { [weak self] text in
             self?.handleSend(text)
@@ -71,6 +73,11 @@ final class OverlayWindowController: NSWindowController {
             if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
                 previousFrontmostApp = frontmost
             }
+        }
+
+        // ターミナルウィンドウ追従
+        if preferencesStore.followTerminalWindow, let targetFrame = getTargetWindowFrame() {
+            positionOverlay(relativeTo: targetFrame, position: preferencesStore.overlayPosition)
         }
 
         // .accessoryアプリでもアクティブ状態に関係なくキーウィンドウ化するためorderFrontRegardlessを使用
@@ -122,7 +129,11 @@ final class OverlayWindowController: NSWindowController {
                 switch result {
                 case .success:
                     NSLog("[TermInjector] テキスト注入成功")
-                    self.overlayViewController.clearInput()
+                    self.sendHistory.add(savedText)
+                    self.sendHistory.reset()
+                    if !self.preferencesStore.retainTextAfterSend {
+                        self.overlayViewController.clearInput()
+                    }
                     if !shouldClose {
                         // 送信後もウィンドウを開きたい場合は再表示
                         self.show()
@@ -151,6 +162,68 @@ final class OverlayWindowController: NSWindowController {
                 }
             }
         }
+    }
+
+    // MARK: - ウィンドウ追従
+
+    /// ターゲットアプリのウィンドウフレームを取得する
+    private func getTargetWindowFrame() -> CGRect? {
+        guard let pid = previousFrontmostApp?.processIdentifier else { return nil }
+        guard let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        for windowInfo in windowList {
+            guard let ownerPID = windowInfo[kCGWindowOwnerPID as String] as? pid_t,
+                  ownerPID == pid,
+                  let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: CGFloat] else {
+                continue
+            }
+            // CGWindowListのboundsはスクリーン座標系（Y軸が上から下）
+            let x = boundsDict["X"] ?? 0
+            let y = boundsDict["Y"] ?? 0
+            let width = boundsDict["Width"] ?? 0
+            let height = boundsDict["Height"] ?? 0
+            return CGRect(x: x, y: y, width: width, height: height)
+        }
+        return nil
+    }
+
+    /// オーバーレイをターゲットウィンドウに対して配置する
+    private func positionOverlay(relativeTo targetFrame: CGRect, position: String) {
+        guard let panel = window else { return }
+        let overlaySize = panel.frame.size
+        // CGWindowListのY座標はプライマリスクリーンの左上が原点（Y軸下向き）
+        // NSWindowのY座標はプライマリスクリーンの左下が原点（Y軸上向き）
+        guard let primaryScreenHeight = NSScreen.screens.first?.frame.height else { return }
+
+        // CGWindowListのY座標（上から下）をNSWindow座標（下から上）に変換
+        let targetNSY = primaryScreenHeight - targetFrame.origin.y - targetFrame.height
+
+        var origin: NSPoint
+        switch position {
+        case "top":
+            origin = NSPoint(
+                x: targetFrame.midX - overlaySize.width / 2,
+                y: targetNSY + targetFrame.height
+            )
+        case "left":
+            origin = NSPoint(
+                x: targetFrame.origin.x - overlaySize.width,
+                y: targetNSY + (targetFrame.height - overlaySize.height) / 2
+            )
+        case "right":
+            origin = NSPoint(
+                x: targetFrame.origin.x + targetFrame.width,
+                y: targetNSY + (targetFrame.height - overlaySize.height) / 2
+            )
+        default: // "bottom"
+            origin = NSPoint(
+                x: targetFrame.midX - overlaySize.width / 2,
+                y: targetNSY - overlaySize.height
+            )
+        }
+
+        panel.setFrameOrigin(origin)
     }
 
     private func showError(_ message: String) {

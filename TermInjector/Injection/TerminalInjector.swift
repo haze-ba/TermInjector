@@ -90,15 +90,20 @@ final class TerminalInjector {
         }
 
         // 7. 待機 → Cmd+V
-        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionPasteDelay)
+        let pasteDelay = UInt64(preferencesStore.injectionPasteDelayMs) * 1_000_000
+        try? await Task.sleep(nanoseconds: pasteDelay)
         KeySimulator.simulatePaste()
 
-        // 8. 待機 → Enter
-        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionEnterDelay)
-        KeySimulator.simulateEnter()
+        // 8. 待機 → Enter（設定で有効な場合のみ）
+        if preferencesStore.simulateEnterAfterPaste {
+            let enterDelay = UInt64(preferencesStore.injectionEnterDelayMs) * 1_000_000
+            try? await Task.sleep(nanoseconds: enterDelay)
+            KeySimulator.simulateEnter()
+        }
 
         // 9. 待機 → クリップボード復元
-        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionRestoreDelay)
+        let restoreDelay = UInt64(preferencesStore.injectionRestoreDelayMs) * 1_000_000
+        try? await Task.sleep(nanoseconds: restoreDelay)
 
         // changeCountチェック: 他アプリがクリップボードを書き換えていたら復元スキップ
         let currentChangeCount = NSPasteboard.general.changeCount

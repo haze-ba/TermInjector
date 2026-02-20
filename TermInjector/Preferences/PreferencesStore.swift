@@ -18,6 +18,13 @@ final class PreferencesStore {
         static let sendOnCmdEnter = "sendOnCmdEnter"
         static let safetyCheck = "safetyCheck"
         static let closeAfterSend = "closeAfterSend"
+        static let simulateEnterAfterPaste = "simulateEnterAfterPaste"
+        static let retainTextAfterSend = "retainTextAfterSend"
+        static let injectionPasteDelayMs = "injectionPasteDelayMs"
+        static let injectionEnterDelayMs = "injectionEnterDelayMs"
+        static let injectionRestoreDelayMs = "injectionRestoreDelayMs"
+        static let followTerminalWindow = "followTerminalWindow"
+        static let overlayPosition = "overlayPosition"
         static let allowedApps = "allowedApps"
     }
 
@@ -33,6 +40,13 @@ final class PreferencesStore {
             Keys.sendOnCmdEnter: false,
             Keys.safetyCheck: true,
             Keys.closeAfterSend: true,
+            Keys.simulateEnterAfterPaste: true,
+            Keys.retainTextAfterSend: false,
+            Keys.injectionPasteDelayMs: 100,
+            Keys.injectionEnterDelayMs: 300,
+            Keys.injectionRestoreDelayMs: 300,
+            Keys.followTerminalWindow: false,
+            Keys.overlayPosition: "bottom",
             Keys.allowedApps: [["bundleID": Constants.terminalBundleID, "name": "Terminal"]],
         ])
     }
@@ -67,6 +81,59 @@ final class PreferencesStore {
     var closeAfterSend: Bool {
         get { defaults.bool(forKey: Keys.closeAfterSend) }
         set { defaults.set(newValue, forKey: Keys.closeAfterSend) }
+    }
+
+    /// ペースト後にEnterを送信する
+    var simulateEnterAfterPaste: Bool {
+        get { defaults.bool(forKey: Keys.simulateEnterAfterPaste) }
+        set { defaults.set(newValue, forKey: Keys.simulateEnterAfterPaste) }
+    }
+
+    /// 送信後もテキストを保持する
+    var retainTextAfterSend: Bool {
+        get { defaults.bool(forKey: Keys.retainTextAfterSend) }
+        set { defaults.set(newValue, forKey: Keys.retainTextAfterSend) }
+    }
+
+    // MARK: - 注入タイミング設定
+
+    /// ペースト前の待機時間（ミリ秒）
+    var injectionPasteDelayMs: Int {
+        get { defaults.integer(forKey: Keys.injectionPasteDelayMs) }
+        set { defaults.set(newValue, forKey: Keys.injectionPasteDelayMs) }
+    }
+
+    /// Enter前の待機時間（ミリ秒）
+    var injectionEnterDelayMs: Int {
+        get { defaults.integer(forKey: Keys.injectionEnterDelayMs) }
+        set { defaults.set(newValue, forKey: Keys.injectionEnterDelayMs) }
+    }
+
+    /// クリップボード復元前の待機時間（ミリ秒）
+    var injectionRestoreDelayMs: Int {
+        get { defaults.integer(forKey: Keys.injectionRestoreDelayMs) }
+        set { defaults.set(newValue, forKey: Keys.injectionRestoreDelayMs) }
+    }
+
+    /// タイミング設定をデフォルトに戻す
+    func resetTimingDefaults() {
+        injectionPasteDelayMs = 100
+        injectionEnterDelayMs = 300
+        injectionRestoreDelayMs = 300
+    }
+
+    // MARK: - ウィンドウ追従設定
+
+    /// ターミナルウィンドウに追従する
+    var followTerminalWindow: Bool {
+        get { defaults.bool(forKey: Keys.followTerminalWindow) }
+        set { defaults.set(newValue, forKey: Keys.followTerminalWindow) }
+    }
+
+    /// オーバーレイの配置位置（"bottom", "top", "left", "right"）
+    var overlayPosition: String {
+        get { defaults.string(forKey: Keys.overlayPosition) ?? "bottom" }
+        set { defaults.set(newValue, forKey: Keys.overlayPosition) }
     }
 
     /// KeyHandlingLogic用のPreferences構造体を生成

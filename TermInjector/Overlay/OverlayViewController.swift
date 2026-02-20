@@ -9,6 +9,11 @@ final class OverlayViewController: NSViewController, InputTextViewDelegate {
 
     var onSend: ((String) -> Void)?
 
+    /// 送信履歴の設定（外部から注入）
+    func setSendHistory(_ history: SendHistory) {
+        inputTextView?.sendHistory = history
+    }
+
     override func loadView() {
         let containerView = NSView(frame: NSRect(x: 0, y: 0,
                                                   width: Constants.Defaults.overlayWidth,
@@ -70,7 +75,8 @@ final class OverlayViewController: NSViewController, InputTextViewDelegate {
         if preferencesStore.sendOnShiftEnter { sendKeys.append("Shift+Enter") }
         if preferencesStore.sendOnCmdEnter { sendKeys.append("Cmd+Enter") }
 
-        let sendPart = sendKeys.isEmpty ? "送信キー未設定" : sendKeys.joined(separator: "/") + ": 送信"
+        let sendAction = preferencesStore.closeAfterSend ? "送信して閉じる" : "送信"
+        let sendPart = sendKeys.isEmpty ? "送信キー未設定" : sendKeys.joined(separator: "/") + ": \(sendAction)"
         footerLabel.stringValue = "\(sendPart) | Esc: 閉じる"
     }
 
