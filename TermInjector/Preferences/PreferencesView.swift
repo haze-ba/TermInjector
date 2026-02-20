@@ -15,7 +15,7 @@ struct PreferencesView: View {
                     Label("一般", systemImage: "gear")
                 }
         }
-        .frame(width: 420, height: 280)
+        .frame(width: 420, height: 380)
     }
 }
 
@@ -27,6 +27,7 @@ private struct SendSettingsTab: View {
     @AppStorage("sendOnShiftEnter") private var sendOnShiftEnter = false
     @AppStorage("sendOnCmdEnter") private var sendOnCmdEnter = false
     @AppStorage("safetyCheck") private var safetyCheck = true
+    @StateObject private var allowedAppsManager = AllowedAppsManager()
 
     var body: some View {
         Form {
@@ -43,10 +44,36 @@ private struct SendSettingsTab: View {
             }
 
             Section {
-                Toggle("安全チェック（送信前にTerminal.appを確認）", isOn: $safetyCheck)
-                    .help("送信前にTerminal.appがフォアグラウンドだったか確認します")
+                Toggle("安全チェック（送信前に対象アプリを確認）", isOn: $safetyCheck)
+                    .help("送信前に登録済みアプリがフォアグラウンドだったか確認します")
             } header: {
                 Text("安全設定")
+            }
+
+            Section {
+                ForEach(allowedAppsManager.apps, id: \.bundleID) { app in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(app.name)
+                            Text(app.bundleID)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button(role: .destructive) {
+                            allowedAppsManager.remove(bundleID: app.bundleID)
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+
+                Button("アプリを追加...") {
+                    allowedAppsManager.addViaOpenPanel()
+                }
+            } header: {
+                Text("対象アプリ")
             }
         }
         .padding()

@@ -92,4 +92,55 @@ final class PreferencesStoreTests: XCTestCase {
         XCTAssertTrue(prefs.sendOnCmdEnter)
         XCTAssertFalse(prefs.closeAfterSend)
     }
+
+    // MARK: - 許可アプリ設定
+
+    func testDefaultAllowedApps() {
+        // デフォルトではTerminal.appのみ
+        let apps = store.allowedApps
+        XCTAssertEqual(apps.count, 1)
+        XCTAssertEqual(apps.first?.bundleID, Constants.terminalBundleID)
+        XCTAssertEqual(apps.first?.name, "Terminal")
+    }
+
+    func testAddAllowedApp() {
+        store.addAllowedApp(AllowedApp(bundleID: "com.googlecode.iterm2", name: "iTerm"))
+        let apps = store.allowedApps
+        XCTAssertEqual(apps.count, 2)
+        XCTAssertEqual(apps[1].bundleID, "com.googlecode.iterm2")
+        XCTAssertEqual(apps[1].name, "iTerm")
+    }
+
+    func testAddDuplicateApp_IsIgnored() {
+        store.addAllowedApp(AllowedApp(bundleID: Constants.terminalBundleID, name: "Terminal"))
+        XCTAssertEqual(store.allowedApps.count, 1)
+    }
+
+    func testRemoveAllowedApp() {
+        store.addAllowedApp(AllowedApp(bundleID: "com.googlecode.iterm2", name: "iTerm"))
+        XCTAssertEqual(store.allowedApps.count, 2)
+
+        store.removeAllowedApp(bundleID: "com.googlecode.iterm2")
+        XCTAssertEqual(store.allowedApps.count, 1)
+        XCTAssertEqual(store.allowedApps.first?.bundleID, Constants.terminalBundleID)
+    }
+
+    func testRemoveLastApp_AllowsEmptyList() {
+        store.removeAllowedApp(bundleID: Constants.terminalBundleID)
+        XCTAssertTrue(store.allowedApps.isEmpty)
+    }
+
+    func testIsAllowedApp_NilBundleID_ReturnsFalse() {
+        XCTAssertFalse(store.isAllowedApp(bundleID: nil))
+    }
+
+    func testIsAllowedApp_UnknownBundleID_ReturnsFalse() {
+        XCTAssertFalse(store.isAllowedApp(bundleID: "com.unknown.app"))
+    }
+
+    func testAllowedBundleIDs_ReturnsSet() {
+        store.addAllowedApp(AllowedApp(bundleID: "com.googlecode.iterm2", name: "iTerm"))
+        let ids = store.allowedBundleIDs
+        XCTAssertEqual(ids, Set(["com.apple.Terminal", "com.googlecode.iterm2"]))
+    }
 }

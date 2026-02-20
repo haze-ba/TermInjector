@@ -23,9 +23,12 @@
 ┌─────────────────────────────────────────────────┐
 │            OverlayWindowController                │
 │  - NSPanel (.floating level)                      │
-│  - toggle() で表示/非表示                          │
-│  - 送信時: TerminalInjector呼び出し                 │
-│  - 前面アプリ記憶 (previousApp)                     │
+│  - toggle(): 3状態制御                             │
+│    - フォーカス中 → hide()                          │
+│    - 表示中・フォーカス外 → refocus()                │
+│    - 非表示 → show()                               │
+│  - 送信時: hide() → inject() → 結果に応じて再表示   │
+│  - 前面アプリ記憶 (previousApp, 非表示→表示時のみ)   │
 │  - 並行送信防止 (isSending flag)                    │
 └────────┬────────────────────────────────────────┘
          │
@@ -50,7 +53,9 @@
 ## 注入シーケンス
 
 ```
-OverlayWindowController
+OverlayWindowController.handleSend()
+    │
+    ├─ 0. hide() — パネルを非表示化（CGEventがTerminalに確実に届くようにする）
     │
     ▼
 TerminalInjector.inject(text:, previousApp:)
@@ -63,6 +68,12 @@ TerminalInjector.inject(text:, previousApp:)
     ├─ 6. 待機 50ms → KeySimulator.simulatePaste() (Cmd+V)
     ├─ 7. 待機 100ms → KeySimulator.simulateEnter() (設定による)
     └─ 8. 待機 200ms → ClipboardManager.restore(snapshot)
+    │
+    ▼
+結果ハンドリング
+    ├─ 成功 + closeAfterSend=false → show() で再表示
+    ├─ 成功 + closeAfterSend=true  → そのまま非表示
+    └─ 失敗 → show() + previousFrontmostApp復元 + エラー表示
 ```
 
 ## キー入力の判定フロー

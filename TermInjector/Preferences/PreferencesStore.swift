@@ -1,5 +1,11 @@
 import Foundation
 
+/// 許可アプリの情報
+struct AllowedApp: Equatable {
+    let bundleID: String
+    let name: String
+}
+
 /// UserDefaultsベースの設定管理
 final class PreferencesStore {
 
@@ -12,6 +18,7 @@ final class PreferencesStore {
         static let sendOnCmdEnter = "sendOnCmdEnter"
         static let safetyCheck = "safetyCheck"
         static let closeAfterSend = "closeAfterSend"
+        static let allowedApps = "allowedApps"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -26,6 +33,7 @@ final class PreferencesStore {
             Keys.sendOnCmdEnter: false,
             Keys.safetyCheck: true,
             Keys.closeAfterSend: true,
+            Keys.allowedApps: [["bundleID": Constants.terminalBundleID, "name": "Terminal"]],
         ])
     }
 
@@ -69,5 +77,50 @@ final class PreferencesStore {
             sendOnCmdEnter: sendOnCmdEnter,
             closeAfterSend: closeAfterSend
         )
+    }
+
+    // MARK: - 許可アプリ設定
+
+    /// 許可アプリ一覧
+    var allowedApps: [AllowedApp] {
+        get {
+            guard let array = defaults.array(forKey: Keys.allowedApps) as? [[String: String]] else {
+                return []
+            }
+            return array.compactMap { dict in
+                guard let bundleID = dict["bundleID"], let name = dict["name"] else { return nil }
+                return AllowedApp(bundleID: bundleID, name: name)
+            }
+        }
+        set {
+            let array = newValue.map { ["bundleID": $0.bundleID, "name": $0.name] }
+            defaults.set(array, forKey: Keys.allowedApps)
+        }
+    }
+
+    /// 安全チェック用の高速参照セット
+    var allowedBundleIDs: Set<String> {
+        Set(allowedApps.map(\.bundleID))
+    }
+
+    /// バンドルIDが許可リストに含まれるか
+    func isAllowedApp(bundleID: String?) -> Bool {
+        guard let bundleID = bundleID else { return false }
+        return allowedBundleIDs.contains(bundleID)
+    }
+
+    /// 許可アプリを追加（重複は無視）
+    func addAllowedApp(_ app: AllowedApp) {
+        var apps = allowedApps
+        guard !apps.contains(where: { $0.bundleID == app.bundleID }) else { return }
+        apps.append(app)
+        allowedApps = apps
+    }
+
+    /// 許可アプリを削除
+    func removeAllowedApp(bundleID: String) {
+        var apps = allowedApps
+        apps.removeAll { $0.bundleID == bundleID }
+        allowedApps = apps
     }
 }

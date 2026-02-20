@@ -4,12 +4,12 @@ import Cocoa
 enum InjectionResult {
     case success
     case noAccessibility
-    case terminalNotRunning
+    case targetAppNotRunning
     case injectionFailed(String)
     case safetyCheckFailed(String)
 }
 
-/// Terminal.appへのテキスト注入を管理する
+/// ターミナルアプリへのテキスト注入を管理する
 @MainActor
 final class TerminalInjector {
 
@@ -32,7 +32,7 @@ final class TerminalInjector {
         self.preferencesStore = preferencesStore
     }
 
-    /// テキストをTerminal.appに注入する
+    /// テキストを送信先アプリに注入する
     /// - Parameters:
     ///   - text: 注入するテキスト
     ///   - previousApp: オーバーレイ表示前のフォアグラウンドアプリ（安全チェック用）
@@ -43,16 +43,21 @@ final class TerminalInjector {
             return .noAccessibility
         }
 
-        // 2. Terminal.app存在確認
-        guard terminalDetector.isTerminalRunning() else {
-            return .terminalNotRunning
+        // 2. 送信先アプリの決定（previousAppが起動中ならそれを使う、なければTerminal.appにフォールバック）
+        let targetApp: NSRunningApplication
+        if let prevApp = previousApp, !prevApp.isTerminated {
+            targetApp = prevApp
+        } else if let terminalApp = terminalDetector.findTerminalApp() {
+            targetApp = terminalApp
+        } else {
+            return .targetAppNotRunning
         }
 
         // 3. 安全チェック（設定で有効な場合）
-        if preferencesStore.safetyCheck, let prevApp = previousApp {
-            if prevApp.bundleIdentifier != Constants.terminalBundleID {
+        if preferencesStore.safetyCheck {
+            if !preferencesStore.isAllowedApp(bundleID: targetApp.bundleIdentifier) {
                 return .safetyCheckFailed(
-                    "オーバーレイ表示前のアプリがTerminal.appではありません（\(prevApp.localizedName ?? "不明")）。\n送信先を確認してください。"
+                    "オーバーレイ表示前のアプリ（\(targetApp.localizedName ?? "不明")）は許可リストに登録されていません。\n設定画面で対象アプリを追加してください。"
                 )
             }
         }
@@ -67,10 +72,10 @@ final class TerminalInjector {
             return .injectionFailed("クリップボードへのテキスト設定に失敗しました")
         }
 
-        // 6. Terminal.appアクティブ化（リトライ対応）
+        // 6. 送信先アプリのアクティブ化（リトライ対応）
         var activated = false
         for attempt in 0..<maxRetries {
-            if terminalDetector.activateTerminal() {
+            if targetApp.activate() {
                 activated = true
                 break
             }
@@ -81,7 +86,7 @@ final class TerminalInjector {
 
         guard activated else {
             clipboardManager.restore(snapshot, force: true)
-            return .injectionFailed("Terminal.appのアクティブ化に失敗しました")
+            return .injectionFailed("送信先アプリのアクティブ化に失敗しました")
         }
 
         // 7. 待機 → Cmd+V

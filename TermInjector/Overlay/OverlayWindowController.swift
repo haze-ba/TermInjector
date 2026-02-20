@@ -51,7 +51,11 @@ final class OverlayWindowController: NSWindowController {
         guard let panel = window else { return }
 
         if panel.isVisible {
-            hide()
+            if panel.isKeyWindow {
+                hide()  // フォーカス中 → 閉じる
+            } else {
+                refocus()  // フォーカス外 → 再フォーカス
+            }
         } else {
             show()
         }
@@ -60,8 +64,10 @@ final class OverlayWindowController: NSWindowController {
     func show() {
         guard let panel = window else { return }
 
-        // 表示直前のフォアグラウンドアプリを記憶
-        previousFrontmostApp = NSWorkspace.shared.frontmostApplication
+        // 非表示→表示の遷移時のみ、直前のフォアグラウンドアプリを記憶
+        if !panel.isVisible {
+            previousFrontmostApp = NSWorkspace.shared.frontmostApplication
+        }
 
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -70,6 +76,15 @@ final class OverlayWindowController: NSWindowController {
 
     func hide() {
         window?.orderOut(nil)
+    }
+
+    /// パネルが表示中だがフォーカスを失っている場合に再フォーカスする
+    /// previousFrontmostApp は更新しない（元のターミナルに送信するため）
+    private func refocus() {
+        guard let panel = window, panel.isVisible else { return }
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        overlayViewController.focusInput()
     }
 
     private func handleSend(_ text: String) {
@@ -85,6 +100,9 @@ final class OverlayWindowController: NSWindowController {
         // テキストを保持してから送信（失敗時に復元するため）
         let savedText = text
 
+        // 送信前にパネルを非表示にする（CGEventがTerminalに確実に届くようにする）
+        hide()
+
         Task {
             let result = await terminalInjector.inject(
                 text: savedText,
@@ -97,23 +115,31 @@ final class OverlayWindowController: NSWindowController {
                 switch result {
                 case .success:
                     NSLog("[TermInjector] テキスト注入成功")
-                    // 成功後にクリア・クローズ
                     self.overlayViewController.clearInput()
-                    if shouldClose {
-                        self.hide()
+                    if !shouldClose {
+                        // 送信後もウィンドウを開きたい場合は再表示
+                        self.show()
                     }
 
                 case .noAccessibility:
                     NSLog("[TermInjector] アクセシビリティ権限がありません")
-                    // テキストはクリアしない（ユーザーが再送信できるように）
+                    // 失敗時はパネルを再表示し、送信先アプリの記憶を復元
+                    self.show()
+                    self.previousFrontmostApp = previousApp
 
-                case .terminalNotRunning:
-                    self.showError("Terminal.appが起動していません。Terminal.appを起動してから再度お試しください。")
+                case .targetAppNotRunning:
+                    self.show()
+                    self.previousFrontmostApp = previousApp
+                    self.showError("送信先のアプリが起動していません。対象アプリを起動してから再度お試しください。")
 
                 case .injectionFailed(let message):
+                    self.show()
+                    self.previousFrontmostApp = previousApp
                     self.showError("テキスト注入に失敗しました: \(message)")
 
                 case .safetyCheckFailed(let message):
+                    self.show()
+                    self.previousFrontmostApp = previousApp
                     self.showError(message)
                 }
             }
