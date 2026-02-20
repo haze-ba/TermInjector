@@ -7,11 +7,9 @@ final class PreferencesStore {
 
     // UserDefaultsキー
     private enum Keys {
-        static let enterSend = "enterSend"
-        static let cmdEnterSend = "cmdEnterSend"
-        static let cmdEnterForced = "cmdEnterForced"
-        static let shiftEnterNewline = "shiftEnterNewline"
-        static let pasteOnly = "pasteOnly"
+        static let sendOnEnter = "sendOnEnter"
+        static let sendOnShiftEnter = "sendOnShiftEnter"
+        static let sendOnCmdEnter = "sendOnCmdEnter"
         static let safetyCheck = "safetyCheck"
         static let closeAfterSend = "closeAfterSend"
     }
@@ -23,50 +21,35 @@ final class PreferencesStore {
 
     private func registerDefaults() {
         defaults.register(defaults: [
-            Keys.enterSend: true,
-            Keys.cmdEnterSend: false,
-            Keys.cmdEnterForced: false,
-            Keys.shiftEnterNewline: true,
-            Keys.pasteOnly: false,
+            Keys.sendOnEnter: true,
+            Keys.sendOnShiftEnter: false,
+            Keys.sendOnCmdEnter: false,
             Keys.safetyCheck: true,
             Keys.closeAfterSend: true,
         ])
     }
 
-    // MARK: - Properties
+    // MARK: - 送信キー設定
 
-    var enterSend: Bool {
-        get { defaults.bool(forKey: Keys.enterSend) }
-        set { defaults.set(newValue, forKey: Keys.enterSend) }
+    /// Enterで送信する
+    var sendOnEnter: Bool {
+        get { defaults.bool(forKey: Keys.sendOnEnter) }
+        set { defaults.set(newValue, forKey: Keys.sendOnEnter) }
     }
 
-    var cmdEnterSend: Bool {
-        get { defaults.bool(forKey: Keys.cmdEnterSend) }
-        set { defaults.set(newValue, forKey: Keys.cmdEnterSend) }
+    /// Shift+Enterで送信する
+    var sendOnShiftEnter: Bool {
+        get { defaults.bool(forKey: Keys.sendOnShiftEnter) }
+        set { defaults.set(newValue, forKey: Keys.sendOnShiftEnter) }
     }
 
-    var cmdEnterForced: Bool {
-        get { defaults.bool(forKey: Keys.cmdEnterForced) }
-        set {
-            defaults.set(newValue, forKey: Keys.cmdEnterForced)
-            // cmdEnterForcedをONにした場合、cmdEnterSendもONにする
-            if newValue {
-                defaults.set(true, forKey: Keys.cmdEnterSend)
-                // cmdEnterForced時はenterSendを無効化（Cmd+Enterのみで送信）
-                defaults.set(false, forKey: Keys.enterSend)
-            }
-        }
+    /// Cmd+Enterで送信する
+    var sendOnCmdEnter: Bool {
+        get { defaults.bool(forKey: Keys.sendOnCmdEnter) }
+        set { defaults.set(newValue, forKey: Keys.sendOnCmdEnter) }
     }
 
-    var shiftEnterNewline: Bool {
-        get { defaults.bool(forKey: Keys.shiftEnterNewline) }
-        set { defaults.set(newValue, forKey: Keys.shiftEnterNewline) }
-    }
-
-    var pasteOnly: Bool {
-        get { defaults.bool(forKey: Keys.pasteOnly) }
-        set { defaults.set(newValue, forKey: Keys.pasteOnly) }
-    }
+    // MARK: - その他の設定
 
     var safetyCheck: Bool {
         get { defaults.bool(forKey: Keys.safetyCheck) }
@@ -81,11 +64,9 @@ final class PreferencesStore {
     /// KeyHandlingLogic用のPreferences構造体を生成
     func toKeyHandlingPreferences() -> KeyHandlingLogic.Preferences {
         return KeyHandlingLogic.Preferences(
-            enterSend: enterSend,
-            cmdEnterSend: cmdEnterSend,
-            cmdEnterForced: cmdEnterForced,
-            shiftEnterNewline: shiftEnterNewline,
-            pasteOnly: pasteOnly,
+            sendOnEnter: sendOnEnter,
+            sendOnShiftEnter: sendOnShiftEnter,
+            sendOnCmdEnter: sendOnCmdEnter,
             closeAfterSend: closeAfterSend
         )
     }

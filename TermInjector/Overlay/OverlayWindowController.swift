@@ -80,7 +80,6 @@ final class OverlayWindowController: NSWindowController {
         isSending = true
 
         let shouldClose = preferencesStore.closeAfterSend
-        let sendEnter = !preferencesStore.pasteOnly
         let previousApp = previousFrontmostApp
 
         // テキストを保持してから送信（失敗時に復元するため）
@@ -89,7 +88,6 @@ final class OverlayWindowController: NSWindowController {
         Task {
             let result = await terminalInjector.inject(
                 text: savedText,
-                sendEnter: sendEnter,
                 previousApp: previousApp
             )
 

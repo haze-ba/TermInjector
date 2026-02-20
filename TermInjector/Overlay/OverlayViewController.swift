@@ -55,12 +55,23 @@ final class OverlayViewController: NSViewController, InputTextViewDelegate {
     }
 
     private func setupFooterLabel() {
-        footerLabel = NSTextField(labelWithString: "Enter: 送信 | Shift+Enter: 改行 | Esc: 閉じる")
+        footerLabel = NSTextField(labelWithString: "")
         footerLabel.font = NSFont.systemFont(ofSize: 11)
         footerLabel.textColor = .secondaryLabelColor
         footerLabel.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(footerLabel)
+    }
+
+    /// フッターラベルを現在の設定に合わせて更新する
+    private func updateFooterLabel() {
+        var sendKeys: [String] = []
+        if preferencesStore.sendOnEnter { sendKeys.append("Enter") }
+        if preferencesStore.sendOnShiftEnter { sendKeys.append("Shift+Enter") }
+        if preferencesStore.sendOnCmdEnter { sendKeys.append("Cmd+Enter") }
+
+        let sendPart = sendKeys.isEmpty ? "送信キー未設定" : sendKeys.joined(separator: "/") + ": 送信"
+        footerLabel.stringValue = "\(sendPart) | Esc: 閉じる"
     }
 
     private func setupConstraints() {
@@ -79,6 +90,7 @@ final class OverlayViewController: NSViewController, InputTextViewDelegate {
 
     func focusInput() {
         syncPreferences()
+        updateFooterLabel()
         view.window?.makeFirstResponder(inputTextView)
     }
 

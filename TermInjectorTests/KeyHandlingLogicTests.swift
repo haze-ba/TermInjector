@@ -6,6 +6,7 @@ final class KeyHandlingLogicTests: XCTestCase {
     typealias KeyEvent = KeyHandlingLogic.KeyEvent
     typealias Preferences = KeyHandlingLogic.Preferences
 
+    // デフォルト: sendOnEnter=true, sendOnShiftEnter=false, sendOnCmdEnter=false
     private let defaultPrefs = Preferences()
 
     // MARK: - Escape
@@ -20,7 +21,7 @@ final class KeyHandlingLogicTests: XCTestCase {
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .close)
     }
 
-    // MARK: - IME変換中のEnter
+    // MARK: - IME変換中（全キー共通: IMEに委譲）
 
     func testEnter_DuringIME_PassesToIME() {
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [], hasMarkedText: true)
@@ -32,78 +33,96 @@ final class KeyHandlingLogicTests: XCTestCase {
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .passToIME)
     }
 
+    func testShiftEnter_DuringIME_PassesToIME() {
+        let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.shift], hasMarkedText: true)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .passToIME)
+    }
+
     func testCmdEnter_DuringIME_PassesToIME() {
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.command], hasMarkedText: true)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .passToIME)
     }
 
-    // MARK: - 素のEnter（デフォルト設定: enterSend=true）
+    // MARK: - 素のEnter
 
-    func testEnter_Default_Sends() {
+    func testEnter_SendOnEnterTrue_Sends() {
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .send)
     }
 
-    func testEnter_EnterSendFalse_Newline() {
+    func testEnter_SendOnEnterFalse_Newline() {
         var prefs = defaultPrefs
-        prefs.enterSend = false
+        prefs.sendOnEnter = false
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .newline)
     }
 
     // MARK: - Shift+Enter
 
-    func testShiftEnter_Default_Newline() {
+    func testShiftEnter_SendOnShiftEnterFalse_Newline() {
+        // デフォルト: sendOnShiftEnter=false → 改行
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.shift], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .newline)
     }
 
-    func testShiftEnter_ShiftEnterNewlineFalse_StillNewline() {
+    func testShiftEnter_SendOnShiftEnterTrue_Sends() {
         var prefs = defaultPrefs
-        prefs.shiftEnterNewline = false
+        prefs.sendOnShiftEnter = true
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.shift], hasMarkedText: false)
-        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .newline)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
     }
 
     // MARK: - Cmd+Enter
 
-    func testCmdEnter_CmdEnterSendTrue_Sends() {
-        var prefs = defaultPrefs
-        prefs.cmdEnterSend = true
-        let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.command], hasMarkedText: false)
-        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
-    }
-
-    func testCmdEnter_CmdEnterSendFalse_Newline() {
+    func testCmdEnter_SendOnCmdEnterFalse_Newline() {
+        // デフォルト: sendOnCmdEnter=false → 改行
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.command], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .newline)
     }
 
-    func testCmdEnter_Forced_AlwaysSends() {
+    func testCmdEnter_SendOnCmdEnterTrue_Sends() {
         var prefs = defaultPrefs
-        prefs.cmdEnterForced = true
-        prefs.pasteOnly = true // pasteOnlyでもCmd+Enter強制は送信
+        prefs.sendOnCmdEnter = true
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.command], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
     }
 
-    // MARK: - pasteOnlyモード
+    // MARK: - 複数送信キーの組み合わせ
 
-    func testEnter_PasteOnly_Newline() {
-        var prefs = defaultPrefs
-        prefs.pasteOnly = true
+    func testAllSendKeysEnabled_EnterSends() {
+        var prefs = Preferences()
+        prefs.sendOnEnter = true
+        prefs.sendOnShiftEnter = true
+        prefs.sendOnCmdEnter = true
+        let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
+    }
+
+    func testAllSendKeysEnabled_ShiftEnterSends() {
+        var prefs = Preferences()
+        prefs.sendOnEnter = true
+        prefs.sendOnShiftEnter = true
+        prefs.sendOnCmdEnter = true
+        let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.shift], hasMarkedText: false)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
+    }
+
+    func testNoSendKeys_EnterIsNewline() {
+        var prefs = Preferences()
+        prefs.sendOnEnter = false
+        prefs.sendOnShiftEnter = false
+        prefs.sendOnCmdEnter = false
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .newline)
     }
 
-    func testCmdEnter_PasteOnly_CmdEnterNotForced_Newline() {
-        var prefs = defaultPrefs
-        prefs.pasteOnly = true
-        prefs.cmdEnterSend = true
-        prefs.cmdEnterForced = false
+    func testNoSendKeys_CmdEnterIsNewline() {
+        var prefs = Preferences()
+        prefs.sendOnEnter = false
+        prefs.sendOnShiftEnter = false
+        prefs.sendOnCmdEnter = false
         let event = KeyEvent(keyCode: KeyHandlingLogic.enterKeyCode, modifiers: [.command], hasMarkedText: false)
-        // cmdEnterSendはtrueだが、cmdEnterForcedではないので送信
-        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .send)
+        XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: prefs), .newline)
     }
 
     // MARK: - テンキーReturn
@@ -116,7 +135,7 @@ final class KeyHandlingLogicTests: XCTestCase {
     // MARK: - その他のキー
 
     func testOtherKey_PassesToSuper() {
-        let event = KeyEvent(keyCode: 0, modifiers: [], hasMarkedText: false) // 'a'キー
+        let event = KeyEvent(keyCode: 0, modifiers: [], hasMarkedText: false)
         XCTAssertEqual(KeyHandlingLogic.determineAction(event: event, preferences: defaultPrefs), .passToSuper)
     }
 

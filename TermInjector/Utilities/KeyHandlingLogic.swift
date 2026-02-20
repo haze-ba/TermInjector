@@ -32,11 +32,13 @@ enum KeyHandlingLogic {
     }
 
     struct Preferences: Equatable {
-        var enterSend: Bool = true
-        var cmdEnterSend: Bool = false
-        var cmdEnterForced: Bool = false
-        var shiftEnterNewline: Bool = true
-        var pasteOnly: Bool = false
+        /// Enterで送信する
+        var sendOnEnter: Bool = true
+        /// Shift+Enterで送信する
+        var sendOnShiftEnter: Bool = false
+        /// Cmd+Enterで送信する
+        var sendOnCmdEnter: Bool = false
+        /// 送信後にウィンドウを閉じる
         var closeAfterSend: Bool = true
     }
 
@@ -68,37 +70,15 @@ enum KeyHandlingLogic {
 
         // Cmd+Enter
         if modifiers.contains(.command) {
-            if preferences.cmdEnterForced {
-                // cmdEnterForced: Cmd+Enterは常に送信（pasteOnlyでも送信）
-                return .send
-            }
-            if preferences.cmdEnterSend {
-                return .send
-            }
-            // Cmd+Enterが送信でない場合は改行
-            return .newline
+            return preferences.sendOnCmdEnter ? .send : .newline
         }
 
         // Shift+Enter
         if modifiers.contains(.shift) {
-            if preferences.shiftEnterNewline {
-                return .newline
-            }
-            // shiftEnterNewlineが無効でも、改行として扱う
-            return .newline
+            return preferences.sendOnShiftEnter ? .send : .newline
         }
 
         // 素のEnter
-        if preferences.pasteOnly {
-            // pasteOnlyモード: Enterは改行
-            return .newline
-        }
-
-        if preferences.enterSend {
-            return .send
-        }
-
-        // enterSend が false の場合、改行
-        return .newline
+        return preferences.sendOnEnter ? .send : .newline
     }
 }

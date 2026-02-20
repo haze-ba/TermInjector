@@ -35,9 +35,8 @@ final class TerminalInjector {
     /// テキストをTerminal.appに注入する
     /// - Parameters:
     ///   - text: 注入するテキスト
-    ///   - sendEnter: 注入後にEnterキーを送信するか
     ///   - previousApp: オーバーレイ表示前のフォアグラウンドアプリ（安全チェック用）
-    func inject(text: String, sendEnter: Bool = true, previousApp: NSRunningApplication? = nil) async -> InjectionResult {
+    func inject(text: String, previousApp: NSRunningApplication? = nil) async -> InjectionResult {
         // 1. アクセシビリティ権限チェック
         guard AccessibilityChecker.isAccessibilityEnabled() else {
             AccessibilityChecker.ensureAccessibility()
@@ -89,11 +88,9 @@ final class TerminalInjector {
         try? await Task.sleep(nanoseconds: Constants.Defaults.injectionPasteDelay)
         KeySimulator.simulatePaste()
 
-        // 8. 待機 → Enter（設定による）
-        if sendEnter && !preferencesStore.pasteOnly {
-            try? await Task.sleep(nanoseconds: Constants.Defaults.injectionEnterDelay)
-            KeySimulator.simulateEnter()
-        }
+        // 8. 待機 → Enter
+        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionEnterDelay)
+        KeySimulator.simulateEnter()
 
         // 9. 待機 → クリップボード復元
         try? await Task.sleep(nanoseconds: Constants.Defaults.injectionRestoreDelay)

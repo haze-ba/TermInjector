@@ -22,38 +22,37 @@ final class PreferencesStoreTests: XCTestCase {
     // MARK: - デフォルト値
 
     func testDefaultValues() {
-        XCTAssertTrue(store.enterSend)
-        XCTAssertFalse(store.cmdEnterSend)
-        XCTAssertFalse(store.cmdEnterForced)
-        XCTAssertTrue(store.shiftEnterNewline)
-        XCTAssertFalse(store.pasteOnly)
+        XCTAssertTrue(store.sendOnEnter)
+        XCTAssertFalse(store.sendOnShiftEnter)
+        XCTAssertFalse(store.sendOnCmdEnter)
         XCTAssertTrue(store.safetyCheck)
         XCTAssertTrue(store.closeAfterSend)
     }
 
-    // MARK: - 読み書き
+    // MARK: - 送信キー読み書き
 
-    func testReadWrite_enterSend() {
-        store.enterSend = false
-        XCTAssertFalse(store.enterSend)
-        store.enterSend = true
-        XCTAssertTrue(store.enterSend)
+    func testReadWrite_sendOnEnter() {
+        store.sendOnEnter = false
+        XCTAssertFalse(store.sendOnEnter)
+        store.sendOnEnter = true
+        XCTAssertTrue(store.sendOnEnter)
     }
 
-    func testReadWrite_cmdEnterSend() {
-        store.cmdEnterSend = true
-        XCTAssertTrue(store.cmdEnterSend)
+    func testReadWrite_sendOnShiftEnter() {
+        store.sendOnShiftEnter = true
+        XCTAssertTrue(store.sendOnShiftEnter)
+        store.sendOnShiftEnter = false
+        XCTAssertFalse(store.sendOnShiftEnter)
     }
 
-    func testReadWrite_shiftEnterNewline() {
-        store.shiftEnterNewline = false
-        XCTAssertFalse(store.shiftEnterNewline)
+    func testReadWrite_sendOnCmdEnter() {
+        store.sendOnCmdEnter = true
+        XCTAssertTrue(store.sendOnCmdEnter)
+        store.sendOnCmdEnter = false
+        XCTAssertFalse(store.sendOnCmdEnter)
     }
 
-    func testReadWrite_pasteOnly() {
-        store.pasteOnly = true
-        XCTAssertTrue(store.pasteOnly)
-    }
+    // MARK: - その他の設定
 
     func testReadWrite_safetyCheck() {
         store.safetyCheck = false
@@ -65,43 +64,32 @@ final class PreferencesStoreTests: XCTestCase {
         XCTAssertFalse(store.closeAfterSend)
     }
 
-    // MARK: - cmdEnterForced の相互排他ルール
+    // MARK: - 送信キーの独立性
 
-    func testCmdEnterForced_EnablesCmd_EnterSend_DisablesEnterSend() {
-        store.enterSend = true
-        store.cmdEnterSend = false
+    func testSendKeys_Independent() {
+        // 各送信キーの設定は互いに影響しない
+        store.sendOnEnter = false
+        store.sendOnShiftEnter = true
+        store.sendOnCmdEnter = true
 
-        store.cmdEnterForced = true
-
-        XCTAssertTrue(store.cmdEnterForced)
-        XCTAssertTrue(store.cmdEnterSend, "cmdEnterForcedをONにするとcmdEnterSendもONになる")
-        XCTAssertFalse(store.enterSend, "cmdEnterForcedをONにするとenterSendが無効になる")
-    }
-
-    func testCmdEnterForced_OffDoesNotChangeOthers() {
-        store.cmdEnterSend = true
-        store.enterSend = false
-
-        store.cmdEnterForced = false
-
-        XCTAssertFalse(store.cmdEnterForced)
-        XCTAssertTrue(store.cmdEnterSend, "cmdEnterForcedをOFFにしても他の値は変わらない")
-        XCTAssertFalse(store.enterSend, "cmdEnterForcedをOFFにしても他の値は変わらない")
+        XCTAssertFalse(store.sendOnEnter)
+        XCTAssertTrue(store.sendOnShiftEnter)
+        XCTAssertTrue(store.sendOnCmdEnter)
     }
 
     // MARK: - toKeyHandlingPreferences
 
     func testToKeyHandlingPreferences() {
-        store.enterSend = false
-        store.cmdEnterSend = true
-        store.pasteOnly = true
+        store.sendOnEnter = false
+        store.sendOnShiftEnter = true
+        store.sendOnCmdEnter = true
+        store.closeAfterSend = false
 
         let prefs = store.toKeyHandlingPreferences()
 
-        XCTAssertFalse(prefs.enterSend)
-        XCTAssertTrue(prefs.cmdEnterSend)
-        XCTAssertTrue(prefs.pasteOnly)
-        XCTAssertTrue(prefs.shiftEnterNewline)
-        XCTAssertTrue(prefs.closeAfterSend)
+        XCTAssertFalse(prefs.sendOnEnter)
+        XCTAssertTrue(prefs.sendOnShiftEnter)
+        XCTAssertTrue(prefs.sendOnCmdEnter)
+        XCTAssertFalse(prefs.closeAfterSend)
     }
 }
