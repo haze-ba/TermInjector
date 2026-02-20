@@ -102,6 +102,8 @@ private struct GeneralSettingsTab: View {
     @AppStorage("retainTextAfterSend") private var retainTextAfterSend = false
     @AppStorage("followTerminalWindow") private var followTerminalWindow = false
     @AppStorage("overlayPosition") private var overlayPosition = "bottom"
+    @State private var launchAtLogin = false
+    @State private var loginItemError: String?
 
     var body: some View {
         Form {
@@ -136,25 +138,37 @@ private struct GeneralSettingsTab: View {
             }
 
             Section {
-                Toggle("ログイン時に自動起動", isOn: Binding(
-                    get: { SMAppService.mainApp.status == .enabled },
-                    set: { newValue in
+                Toggle("ログイン時に自動起動", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { newValue in
                         do {
                             if newValue {
                                 try SMAppService.mainApp.register()
                             } else {
                                 try SMAppService.mainApp.unregister()
                             }
+                            loginItemError = nil
                         } catch {
                             NSLog("[TermInjector] ログイン項目の設定に失敗: \(error)")
+                            loginItemError = error.localizedDescription
+                            // 失敗時はトグルを元に戻す
+                            DispatchQueue.main.async {
+                                launchAtLogin = SMAppService.mainApp.status == .enabled
+                            }
                         }
                     }
-                ))
+                if let errorMessage = loginItemError {
+                    Text("エラー: \(errorMessage)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
             } header: {
                 Text("起動")
             }
         }
         .padding()
+        .onAppear {
+            launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
     }
 }
 
