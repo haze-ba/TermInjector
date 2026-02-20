@@ -1,0 +1,49 @@
+name: TermInjector
+options:
+  bundleIdPrefix: com.terminjector
+  deploymentTarget:
+    macOS: "12.0"
+  xcodeVersion: "15.0"
+  minimumXcodeGenVersion: "2.30"
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.0.0"
+
+targets:
+  TermInjector:
+    type: application
+    platform: macOS
+    sources:
+      - TermInjector
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.terminjector.TermInjector
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: TermInjector/Resources/Info.plist
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "12.0"
+        CODE_SIGN_ENTITLEMENTS: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: KeyboardShortcuts
+    entitlements:
+      path: TermInjector/Resources/TermInjector.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+
+  TermInjectorTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - TermInjectorTests
+    dependencies:
+      - target: TermInjector
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: "YES"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TermInjector.app/Contents/MacOS/TermInjector"

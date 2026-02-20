@@ -1,0 +1,111 @@
+import Cocoa
+
+/// 注入結果
+enum InjectionResult {
+    case success
+    case noAccessibility
+    case terminalNotRunning
+    case injectionFailed(String)
+    case safetyCheckFailed(String)
+}
+
+/// Terminal.appへのテキスト注入を管理する
+@MainActor
+final class TerminalInjector {
+
+    private let clipboardManager: ClipboardManager
+    private let terminalDetector: TerminalDetector
+    private let preferencesStore: PreferencesStore
+
+    /// 最大リトライ回数
+    private let maxRetries = 3
+    /// リトライ間隔（ナノ秒）
+    private let retryInterval: UInt64 = 50_000_000 // 50ms
+
+    init(
+        clipboardManager: ClipboardManager = ClipboardManager(),
+        terminalDetector: TerminalDetector = TerminalDetector(),
+        preferencesStore: PreferencesStore = PreferencesStore()
+    ) {
+        self.clipboardManager = clipboardManager
+        self.terminalDetector = terminalDetector
+        self.preferencesStore = preferencesStore
+    }
+
+    /// テキストをTerminal.appに注入する
+    /// - Parameters:
+    ///   - text: 注入するテキスト
+    ///   - sendEnter: 注入後にEnterキーを送信するか
+    ///   - previousApp: オーバーレイ表示前のフォアグラウンドアプリ（安全チェック用）
+    func inject(text: String, sendEnter: Bool = true, previousApp: NSRunningApplication? = nil) async -> InjectionResult {
+        // 1. アクセシビリティ権限チェック
+        guard AccessibilityChecker.isAccessibilityEnabled() else {
+            AccessibilityChecker.ensureAccessibility()
+            return .noAccessibility
+        }
+
+        // 2. Terminal.app存在確認
+        guard terminalDetector.isTerminalRunning() else {
+            return .terminalNotRunning
+        }
+
+        // 3. 安全チェック（設定で有効な場合）
+        if preferencesStore.safetyCheck, let prevApp = previousApp {
+            if prevApp.bundleIdentifier != Constants.terminalBundleID {
+                return .safetyCheckFailed(
+                    "オーバーレイ表示前のアプリがTerminal.appではありません（\(prevApp.localizedName ?? "不明")）。\n送信先を確認してください。"
+                )
+            }
+        }
+
+        // 4. クリップボード退避
+        let snapshot = clipboardManager.save()
+
+        // 5. テキストをクリップボードに設定
+        guard clipboardManager.setText(text) else {
+            clipboardManager.restore(snapshot, force: true)
+            return .injectionFailed("クリップボードへのテキスト設定に失敗しました")
+        }
+
+        // 6. Terminal.appアクティブ化（リトライ対応）
+        var activated = false
+        for attempt in 0..<maxRetries {
+            if terminalDetector.activateTerminal() {
+                activated = true
+                break
+            }
+            if attempt < maxRetries - 1 {
+                try? await Task.sleep(nanoseconds: retryInterval)
+            }
+        }
+
+        guard activated else {
+            clipboardManager.restore(snapshot, force: true)
+            return .injectionFailed("Terminal.appのアクティブ化に失敗しました")
+        }
+
+        // 7. 待機 → Cmd+V
+        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionPasteDelay)
+        KeySimulator.simulatePaste()
+
+        // 8. 待機 → Enter（設定による）
+        if sendEnter && !preferencesStore.pasteOnly {
+            try? await Task.sleep(nanoseconds: Constants.Defaults.injectionEnterDelay)
+            KeySimulator.simulateEnter()
+        }
+
+        // 9. 待機 → クリップボード復元
+        try? await Task.sleep(nanoseconds: Constants.Defaults.injectionRestoreDelay)
+
+        // changeCountチェック: 他アプリがクリップボードを書き換えていたら復元スキップ
+        let currentChangeCount = NSPasteboard.general.changeCount
+        let expectedChangeCount = snapshot.changeCount + 1 // setTextで+1
+        if currentChangeCount == expectedChangeCount {
+            clipboardManager.restore(snapshot, force: true)
+        } else {
+            NSLog("[TermInjector] クリップボードが外部から変更されたため、復元をスキップしました")
+        }
+
+        return .success
+    }
+}
